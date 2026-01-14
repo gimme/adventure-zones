@@ -1,7 +1,6 @@
 package dev.gimme.adventurezones.domain;
 
 import com.mojang.logging.LogUtils;
-import dev.gimme.adventurezones.application.ChunkDataHandler;
 import dev.gimme.adventurezones.domain.config.ServerConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -16,25 +15,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
-import java.util.List;
 import java.util.Set;
 
 public class AdventureZones {
 
     private static final Logger LOG = LogUtils.getLogger();
 
-    private final ChunkDataHandler chunkDataHandler;
     private final ZoneCollection adventureZones = new ZoneCollection();
-
-    public AdventureZones(ChunkDataHandler chunkDataHandler) {
-        this.chunkDataHandler = chunkDataHandler;
-    }
 
     /**
      * Scans a chunk and creates adventure zones for any matching blocks.
@@ -65,11 +57,6 @@ public class AdventureZones {
 
                                 var isBlockWhitelisted = matchesRegex(blockRL, zoneConfig.blocks());
                                 if (!isBlockWhitelisted) return;
-
-                                if (chunkDataHandler.getPlayerPlacedBlocks(chunk).contains(pos)) {
-                                    LOG.debug("Ignored player-placed block [{}]", pos.toShortString());
-                                    return;
-                                }
 
                                 adventureZones.add(new AdventureZone(pos, zoneConfig.radius(), zoneConfig.minY(), zoneConfig.maxY()));
                                 LOG.debug("Loaded adventure zone for structure {} in chunk {} and block {} at [{}]", structureRL, chunk.getPos(), blockRL, pos.toShortString());
@@ -118,12 +105,6 @@ public class AdventureZones {
         }
     }
 
-    public void onPlayerPlaceBlock(LevelChunk chunk, BlockPos pos, BlockState blockState) {
-        if (!isZoneBlock(blockState, chunk)) return;
-        chunkDataHandler.addPlayerPlacedBlock(chunk, pos);
-        LOG.debug("Player placed zone block [{}]", pos.toShortString());
-    }
-
     /**
      * Checks if the given position is inside an adventure zone.
      */
@@ -161,30 +142,5 @@ public class AdventureZones {
             player.connection.send(titlePacket);
             player.connection.send(subtitlePacket);
         }
-    }
-
-    /**
-     * Checks if the given block is defined as an adventure zone block.
-     */
-    private boolean isZoneBlock(BlockState blockState, LevelChunk chunk) {
-        Set<Structure> structuresInChunk = chunk.getAllReferences().keySet();
-        if (structuresInChunk.isEmpty()) return false;
-
-        List<ResourceLocation> blockWhitelist = ServerConfig.INSTANCE.getBlockWhitelist();
-        var isWhitelistedBlock = blockWhitelist.stream().anyMatch(whitelistedBlock -> blockState.getBlockHolder().is(whitelistedBlock));
-        if (!isWhitelistedBlock) return false;
-
-        List<ResourceLocation> structureWhitelist = ServerConfig.INSTANCE.getStructureWhitelist();
-        List<ResourceLocation> structureBlacklist = ServerConfig.INSTANCE.getStructureBlacklist();
-        Registry<Structure> structureRegistry = chunk.getLevel().registryAccess().registryOrThrow(Registries.STRUCTURE);
-
-        for (Structure structure : structuresInChunk) {
-            var isWhitelisted = structureWhitelist.isEmpty() || structureWhitelist.stream().anyMatch(rl -> structureRegistry.get(rl) == structure);
-            var isBlacklisted = structureBlacklist.stream().anyMatch(rl -> structureRegistry.get(rl) == structure);
-
-            if (isWhitelisted && !isBlacklisted) return true;
-        }
-
-        return false;
     }
 }

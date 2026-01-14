@@ -66,6 +66,6 @@ class AdventureZone {
     }
 
     static int getMaxPossibleChunkZoneRadius() {
-        return ServerConfig.INSTANCE.getZoneRadius();
+        return (int) Math.ceil((double) ServerConfig.INSTANCE.getMaxZoneRadius() / 16);
     }
 }

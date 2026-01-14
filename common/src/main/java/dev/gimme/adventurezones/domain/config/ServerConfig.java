@@ -1,6 +1,5 @@
 package dev.gimme.adventurezones.domain.config;
 
-import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -9,17 +8,14 @@ public abstract class ServerConfig {
 
     public static ServerConfig INSTANCE;
 
-    public abstract int getZoneRadius();
-
-    public abstract List<ResourceLocation> getBlockWhitelist();
-
-    public abstract List<ResourceLocation> getStructureWhitelist();
-
-    public abstract List<ResourceLocation> getStructureBlacklist();
-
     public abstract boolean displayZoneText();
 
     public abstract List<ZoneConfig> getZoneConfigs();
+
+    /**
+     * Returns the maximum extra radius among all defined zones.
+     */
+    public abstract int getMaxZoneRadius();
 
     public record ZoneConfig(
             String structures,
