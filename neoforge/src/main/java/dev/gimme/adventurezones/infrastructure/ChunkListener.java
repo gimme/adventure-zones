@@ -1,28 +1,23 @@
 package dev.gimme.adventurezones.infrastructure;
 
-import dev.gimme.adventurezones.application.ChunkHandler;
+import dev.gimme.adventurezones.Main;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
-import org.jetbrains.annotations.NotNull;
 
 public class ChunkListener {
 
-    private final ChunkHandler chunkHandler;
-
-    public ChunkListener(@NotNull ChunkHandler chunkHandler) {
-        this.chunkHandler = chunkHandler;
-    }
-
     @SubscribeEvent
     public void onChunkLoad(ChunkEvent.Load event) {
+        if (Main.INSTANCE == null) return;
         if (!(event.getChunk() instanceof LevelChunk chunk)) return;
-        chunkHandler.onChunkLoad(chunk);
+        Main.INSTANCE.getChunkHandler().onChunkLoad(chunk);
     }
 
     @SubscribeEvent
     public void onChunkUnload(ChunkEvent.Unload event) {
+        if (Main.INSTANCE == null) return;
         if (!(event.getChunk() instanceof LevelChunk chunk)) return;
-        chunkHandler.onChunkUnload(chunk);
+        Main.INSTANCE.getChunkHandler().onChunkUnload(chunk);
     }
 }
