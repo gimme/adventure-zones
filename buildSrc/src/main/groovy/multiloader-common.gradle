@@ -95,7 +95,7 @@ processResources {
         expand expandProps
     }
 
-    filesMatching(['pack.mcmeta', '*.mixins.json']) {
+    filesMatching(['*.mixins.json']) {
         expand jsonExpandProps
     }
 
