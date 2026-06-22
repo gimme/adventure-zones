@@ -21,7 +21,7 @@ class AdventureZone {
     }
 
     AdventureZone(BlockPos blockPos, int radius, @Nullable Integer minY, @Nullable Integer maxY) {
-        this.chunkPos = new ChunkPos(blockPos);
+        this.chunkPos = ChunkPos.containing(blockPos);
         this.radius = radius;
 
         var sectionPos = SectionPos.of(blockPos);

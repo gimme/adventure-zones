@@ -3,6 +3,7 @@ package dev.gimme.adventurezones.infrastructure;
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.toml.TomlFormat;
 import dev.gimme.adventurezones.domain.config.ServerConfig;
+import dev.gimme.adventurezones.domain.util.Constants;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,19 +11,25 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-public class NeoForgeServerConfig extends ServerConfig {
+/**
+ * {@link ServerConfig} backed by the NeoForge config system. The spec is defined once here in the common module and
+ * registered per loader (natively on NeoForge, via Forge Config API Port on Fabric) as a {@code COMMON} config.
+ */
+public class FcapServerConfig extends ServerConfig {
+
+    public static final String FILE_NAME = Constants.MOD_ID + "-server.toml";
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
-    private static final ModConfigSpec.BooleanValue DISPLAY_MODE_TEXT = BUILDER
+    static final ModConfigSpec.BooleanValue DISPLAY_MODE_TEXT = BUILDER
             .comment("If a text should be displayed on screen when entering/leaving adventure mode")
             .define("displayTextOnModeSwitch", true);
 
-    private static final ModConfigSpec.IntValue COMBAT_MODE_SECONDS = BUILDER
+    static final ModConfigSpec.IntValue COMBAT_MODE_SECONDS = BUILDER
             .comment("How long (in seconds) combat mode should last after a player attacks or is attacked. 0 to disable.")
             .defineInRange("combatModeSeconds", 10, 0, 300);
 
-    private static final ModConfigSpec.ConfigValue<List<? extends Config>> ZONE_SPECS = BUILDER
+    static final ModConfigSpec.ConfigValue<List<? extends Config>> ZONE_SPECS = BUILDER
             .comment("""
                     Adventure zone specification. Defines what chunks should be considered part of the zone. Properties:
                       "structures": A regex pattern matching structure that have to be present in the chunk.
@@ -62,7 +69,7 @@ public class NeoForgeServerConfig extends ServerConfig {
                         cfg.set("radius", 8);
                         return cfg;
                     },
-                    NeoForgeServerConfig::validateZoneConfig
+                    FcapServerConfig::validateZoneConfig
             );
 
     /**

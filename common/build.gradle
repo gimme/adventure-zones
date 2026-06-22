@@ -5,20 +5,25 @@ plugins {
 
 neoForge {
     neoFormVersion = neo_form_version
-
-    parchment {
-        minecraftVersion = parchment_minecraft
-        mappingsVersion = parchment_version
-    }
 }
 
 dependencies {
-    compileOnly group: 'org.spongepowered', name: 'mixin', version: '0.8.5'
+    compileOnly 'org.spongepowered:mixin:0.8.7'
     // fabric and neoforge both bundle mixinextras, so it is safe to use it in common
-    compileOnly group: 'io.github.llamalad7', name: 'mixinextras-common', version: '0.5.2'
-    annotationProcessor group: 'io.github.llamalad7', name: 'mixinextras-common', version: '0.5.2'
+    compileOnly 'io.github.llamalad7:mixinextras-common:0.5.3'
+    annotationProcessor 'io.github.llamalad7:mixinextras-common:0.5.3'
+
+    // Forge Config API Port – NeoForge's config API (ModConfigSpec, ModConfig) ported for the common module.
+    // compileOnly: the actual implementation is provided by NeoForge natively and by FCAP on Fabric at runtime.
+    compileOnly("fuzs.forgeconfigapiport:forgeconfigapiport-common-neoforgeapi:${forge_config_api_port_version}")
+    // night-config backs the TOML zone tables used by the shared config. Provided at runtime by
+    // NeoForge natively and by FCAP on Fabric, so it is compileOnly here.
+    compileOnly("com.electronwill.night-config:toml:${nightconfig_version}")
 }
 
+// Exposes this module's main + gametest sources/classes so each loader can recompile the shared code
+// against its own Minecraft (and IDEs can resolve the shared gametest types). The gametest source set
+// itself is defined by the multiloader-common convention plugin.
 configurations {
     commonJava {
         canBeResolved = false
@@ -28,9 +33,24 @@ configurations {
         canBeResolved = false
         canBeConsumed = true
     }
+    // Exposes the shared gametest sources for each loader to compile into its own gametest set.
+    commonGametestJava {
+        canBeResolved = false
+        canBeConsumed = true
+    }
+    // Exposes the compiled gametest classes so each loader's gametest set can depend on them and
+    // IDEs resolve the shared test types (the build still recompiles the sources via commonGametestJava).
+    commonGametestClasses {
+        canBeResolved = false
+        canBeConsumed = true
+    }
 }
 
 artifacts {
     commonJava sourceSets.main.java.sourceDirectories.singleFile
     commonResources sourceSets.main.resources.sourceDirectories.singleFile
+    commonGametestJava sourceSets.gametest.java.sourceDirectories.singleFile
+    commonGametestClasses(sourceSets.gametest.output.classesDirs.singleFile) {
+        builtBy sourceSets.gametest.output
+    }
 }

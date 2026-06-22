@@ -1,0 +1,17 @@
+{
+    "schemaVersion": 1,
+    "id": "adventurezones_gametest",
+    "version": "1.0.0",
+    "name": "Adventure Zones Game Tests",
+    "description": "Game tests for Adventure Zones. Dev-only; not shipped in the release jar.",
+    "environment": "server",
+    "entrypoints": {
+        "fabric-gametest": [
+            "dev.gimme.adventurezones.fabric.gametest.FabricGameTests"
+        ]
+    },
+    "depends": {
+        "adventurezones": "*",
+        "fabric-gametest-api-v1": "*"
+    }
+}

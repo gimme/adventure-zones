@@ -29,12 +29,12 @@ class ZoneCollection {
      * @return true if there is at least one zone covering the position, false otherwise
      */
     boolean hasAnyZoneInRange(BlockPos pos) {
-        ChunkPos chunkPos = new ChunkPos(pos);
+        ChunkPos chunkPos = ChunkPos.containing(pos);
         int searchRadius = AdventureZone.getMaxPossibleChunkZoneRadius();
 
         for (int dx = -searchRadius; dx <= searchRadius; dx++) {
             for (int dz = -searchRadius; dz <= searchRadius; dz++) {
-                ChunkPos nearbyChunkPos = new ChunkPos(chunkPos.x + dx, chunkPos.z + dz);
+                ChunkPos nearbyChunkPos = new ChunkPos(chunkPos.x() + dx, chunkPos.z() + dz);
                 Set<AdventureZone> zonesInChunk = byChunk.get(nearbyChunkPos);
                 if (zonesInChunk == null) continue;
 

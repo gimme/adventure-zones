@@ -3,7 +3,7 @@ package dev.gimme.adventurezones;
 import dev.gimme.adventurezones.domain.config.ServerConfig;
 import dev.gimme.adventurezones.domain.util.Constants;
 import dev.gimme.adventurezones.infrastructure.ChunkListener;
-import dev.gimme.adventurezones.infrastructure.NeoForgeServerConfig;
+import dev.gimme.adventurezones.infrastructure.FcapServerConfig;
 import dev.gimme.adventurezones.infrastructure.PlayerListener;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -16,8 +16,8 @@ import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 public class NeoForgeMod {
 
     public NeoForgeMod(ModContainer modContainer) {
-        modContainer.registerConfig(ModConfig.Type.COMMON, NeoForgeServerConfig.SPEC, Constants.MOD_ID + "-server.toml");
-        ServerConfig.INSTANCE = new NeoForgeServerConfig();
+        modContainer.registerConfig(ModConfig.Type.COMMON, FcapServerConfig.SPEC, FcapServerConfig.FILE_NAME);
+        ServerConfig.INSTANCE = new FcapServerConfig();
 
         // Register listeners once at mod load. They read the current Main.INSTANCE, which is
         // rebuilt per server start, so they never hold stale state across world loads.
