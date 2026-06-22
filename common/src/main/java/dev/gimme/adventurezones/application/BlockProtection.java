@@ -2,6 +2,7 @@ package dev.gimme.adventurezones.application;
 
 import dev.gimme.adventurezones.domain.BlockInteractionRules;
 import dev.gimme.adventurezones.domain.ProtectedStructures;
+import dev.gimme.adventurezones.domain.ProtectedStructures.Match;
 import dev.gimme.adventurezones.domain.config.ServerConfig.StructureRule;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -50,24 +51,27 @@ public final class BlockProtection {
                               BlockInWorld ruleBlock, boolean placing) {
         if (player == null || player.isCreative()) return false; // Creative bypass
 
-        List<StructureRule> rules = ProtectedStructures.rulesAt(level, targetPos);
-        if (rules.isEmpty()) return false; // not inside a protected piece
+        List<Match> matches = ProtectedStructures.matchesAt(level, targetPos);
 
-        // The rules are whitelists: each matching structure independently says what it permits, so the edit is allowed
-        // as soon as any matching rule permits it, and prevented only if none do. Being inside a protected piece only
-        // matters for breachable rules, so compute it lazily.
-        Boolean insideProtected = null;
-        for (StructureRule rule : rules) {
-            Map<String, String> allowList = placing ? rule.canPlaceOn() : rule.canBreak();
-            if (BlockInteractionRules.isAllowed(item, ruleBlock, allowList)) return false; // this rule's allow-list permits it
+        // Membership: the position is in scope only if a protecting rule matches it. Non-protecting "library" rules
+        // (e.g. a ".*" base) contribute allow-lists but never put a structure into scope on their own.
+        if (matches.stream().flatMap(m -> m.rules().stream()).noneMatch(StructureRule::isProtected)) return false;
 
-            if (rule.breachable()) {
-                if (insideProtected == null) {
-                    insideProtected = ProtectedStructures.isInsideAnyProtected(level, player.blockPosition());
+        // Every matching rule is a whitelist: the edit is allowed the moment any rule permits it, no matter what other
+        // rules say. A rule permits it either through its allow-list, or — for a breachable rule — by the player
+        // standing outside that rule's own structure (breach from outside, locked inside).
+        for (Match match : matches) {
+            for (StructureRule rule : match.rules()) {
+                Map<String, String> allowList = placing ? rule.canPlaceOn() : rule.canBreak();
+                if (BlockInteractionRules.isAllowed(item, ruleBlock, allowList)) return false;
+
+                if (rule.isProtected() && rule.breachable()
+                        && !ProtectedStructures.isInsidePiece(level, player.blockPosition(), match.structure())) {
+                    return false; // breachable rule and the player is outside its structure: breach permitted
                 }
-                if (!insideProtected) return false; // breachable and the player is outside: breach permitted
             }
         }
-        return true; // no matching rule permits the edit
+
+        return true; // protected, and no matching rule permits the edit
     }
 }

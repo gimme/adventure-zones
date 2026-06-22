@@ -29,14 +29,18 @@ public final class AdventureZonesGameTests {
         ServerConfig config = ServerConfig.INSTANCE;
         helper.assertTrue(config != null, "ServerConfig should be initialized by the loader");
 
-        List<StructureRule> rules = config.getProtectedStructures();
-        helper.assertFalse(rules.isEmpty(), "the default config should define at least one protected structure");
+        List<StructureRule> rules = config.getStructureRules();
+        helper.assertFalse(rules.isEmpty(), "the default config should define at least one structure rule");
+        helper.assertTrue(rules.stream().anyMatch(StructureRule::isProtected),
+                "the defaults should include at least one protecting rule");
+        helper.assertTrue(rules.stream().anyMatch(rule -> !rule.isProtected()),
+                "the defaults should include a non-protecting \".*\" base rule that only contributes allow-lists");
         helper.assertTrue(rules.stream().anyMatch(rule -> !rule.breachable()),
                 "the defaults should include an always-protected (breachable=false) structure");
         helper.assertTrue(rules.stream().anyMatch(StructureRule::breachable),
                 "the defaults should include a breachable structure (e.g. stronghold)");
         helper.assertTrue(rules.stream().anyMatch(rule -> !rule.canPlaceOn().isEmpty()),
-                "the defaults should grant at least one per-structure canPlaceOn exception");
+                "the defaults should grant at least one canPlaceOn exception");
         helper.assertTrue(rules.stream().allMatch(rule -> rule.canBreak().isEmpty()),
                 "the default per-structure canBreak allow-lists should be empty (breaking is the escape vector)");
         helper.succeed();
@@ -47,23 +51,24 @@ public final class AdventureZonesGameTests {
      * {@link ServerConfig}, confirming the test-support handle binds to the loaded spec on either loader.
      */
     public static void protectedStructuresConfigurable(GameTestHelper helper) {
-        List<? extends Config> original = ConfigTestSupport.PROTECTED_STRUCTURE.get();
+        List<? extends Config> original = ConfigTestSupport.STRUCTURE_PROTECTION.get();
         try {
             Config rule = TomlFormat.newConfig();
             rule.set("structures", "minecraft:stronghold");
             rule.set("breachable", true);
             rule.set("canBreak", List.of("diamond_pickaxe=obsidian"));
 
-            ConfigTestSupport.PROTECTED_STRUCTURE.set(List.of(rule));
+            ConfigTestSupport.STRUCTURE_PROTECTION.set(List.of(rule));
 
-            List<StructureRule> rules = ServerConfig.INSTANCE.getProtectedStructures();
+            List<StructureRule> rules = ServerConfig.INSTANCE.getStructureRules();
             helper.assertTrue(rules.size() == 1, "expected exactly one configured rule but got " + rules.size());
             StructureRule configured = rules.getFirst();
+            helper.assertTrue(configured.isProtected(), "a rule with no \"protected\" key should default to protected");
             helper.assertTrue(configured.breachable(), "configured rule should be breachable");
             helper.assertTrue("obsidian".equals(configured.canBreak().get("diamond_pickaxe")),
                     "per-structure canBreak should follow the configured value but was " + configured.canBreak());
         } finally {
-            ConfigTestSupport.PROTECTED_STRUCTURE.set(original);
+            ConfigTestSupport.STRUCTURE_PROTECTION.set(original);
         }
         helper.succeed();
     }

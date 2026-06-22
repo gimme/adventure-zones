@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Reworked protection: instead of forcing players into Adventure mode near structures, the mod now prevents placing and breaking blocks within the real bounds of protected structure pieces (read live from the server's structure data). Each config entry bundles a structure regex, a `breachable` flag (always-protected vs. breach-from-outside/locked-inside), and its own `canPlaceOn`/`canBreak` regex allow-lists, so rules can differ per structure. Removed the combat-mode timer and on-screen mode text. Creative mode bypasses protection.
+- Reworked protection: instead of forcing players into Adventure mode near structures, the mod now prevents placing and breaking blocks within the real bounds of protected structure pieces (read live from the server's structure data). Each `structureProtection` entry bundles a structure regex, a `protected` flag, a `breachable` flag (always-protected vs. breach-from-outside/locked-inside), and its own `canPlaceOn`/`canBreak` regex allow-lists, so rules can differ per structure. A structure's allowed edits are the union of every matching rule, and a rule with `protected = false` only contributes allow-lists without protecting anything on its own, so common exceptions can live in a single shared `".*"` base rule rather than being repeated per structure. Removed the combat-mode timer and on-screen mode text. Creative mode bypasses protection.
 - Updated to Minecraft 26.2 (Java 25), NeoForge 26.2 and Fabric API 0.152.1
 - Modernized the build: Gradle 9.5.1, Fabric Loom 1.17, and dropped Parchment mappings
 

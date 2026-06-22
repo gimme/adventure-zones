@@ -28,15 +28,22 @@ public class FcapServerConfig extends ServerConfig {
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
-    static final ModConfigSpec.ConfigValue<List<? extends Config>> PROTECTED_STRUCTURE = BUILDER
+    static final ModConfigSpec.ConfigValue<List<? extends Config>> STRUCTURE_PROTECTION = BUILDER
             .comment("""
-                    Structures whose generated pieces are protected from block placing/breaking. Each entry is a set of
-                    rules for the structures it matches. Properties:
+                    Rules controlling which structures' generated pieces are protected from block placing/breaking and
+                    what is still allowed inside them. A structure's allowed edits are the union of every rule that
+                    matches it, so common exceptions can live in one shared rule instead of being repeated. Properties:
                       "structures": A regex matching the structures this rule applies to.
+                      "protected": If true (default), a matching structure is in scope and its blocks are protected. If
+                        false, the rule never protects anything on its own; it only contributes its allow-lists to
+                        structures that some other rule protects. Use a non-protecting ".*" rule as a shared base so you
+                        do not have to repeat common exceptions in every structure. A ".*" rule must be non-protecting,
+                        since most structures should not be touched at all.
                       "breachable": If false (default), the structure's blocks can never be placed/broken by
-                        non-creative players. If true, they can be edited only while the player stands outside all
-                        protected pieces (you can breach a wall from outside, but cannot dig once inside). Use this for
-                        sealed structures with no natural entrance, e.g. strongholds.
+                        non-creative players. If true, they can be edited only while the player stands outside this
+                        structure's own pieces (you can breach a wall from outside, but cannot dig once inside; standing
+                        in an unrelated protected structure does not block it). Use this for sealed structures with no
+                        natural entrance, e.g. strongholds. Only meaningful on a protecting rule.
                       "canPlaceOn" (optional): Exceptions for this rule. A list of "<itemRegex>=<blockRegex>" entries;
                         each lets the matched item still be placed on the matched block inside the structure.
                         E.g. ["ladder|torch=.*"].
@@ -47,31 +54,40 @@ public class FcapServerConfig extends ServerConfig {
                     (e.g. minecraft:fortress); otherwise only against the path.
                     """)
             .defineList(
-                    "protectedStructure",
+                    "structureProtection",
                     () -> {
+                        // Shared base: light/navigation sources may be placed in any protected structure, so the
+                        // protecting rules below need not repeat it. Non-protecting, so it never pulls a structure
+                        // into scope on its own.
+                        Config base = TomlFormat.newConfig();
+                        base.set("structures", ".*");
+                        base.set("protected", false);
+                        base.set("canPlaceOn", lightSources());
+
                         Config alwaysProtected = TomlFormat.newConfig();
                         alwaysProtected.set("structures", "fortress|bastion_remnant|end_city|mansion|.*_pyramid|ancient_city|trial_chambers|pillager_outpost");
+                        alwaysProtected.set("protected", true);
                         alwaysProtected.set("breachable", false);
-                        alwaysProtected.set("canPlaceOn", lightSources());
                         alwaysProtected.set("canBreak", List.of());
 
                         Config stronghold = TomlFormat.newConfig();
                         stronghold.set("structures", "stronghold");
+                        stronghold.set("protected", true);
                         stronghold.set("breachable", true);
-                        stronghold.set("canPlaceOn", lightSources());
                         stronghold.set("canBreak", List.of());
 
-                        return List.of(alwaysProtected, stronghold);
+                        return List.of(base, alwaysProtected, stronghold);
                     },
                     () -> {
                         Config cfg = TomlFormat.newConfig();
                         cfg.set("structures", "minecraft:fortress");
+                        cfg.set("protected", true);
                         cfg.set("breachable", false);
                         cfg.set("canPlaceOn", lightSources());
                         cfg.set("canBreak", List.of());
                         return cfg;
                     },
-                    FcapServerConfig::validateProtectedStructure
+                    FcapServerConfig::validateStructureProtection
             );
 
     /**
@@ -82,15 +98,16 @@ public class FcapServerConfig extends ServerConfig {
     }
 
     /**
-     * Validates that the given object is a valid protected-structure rule.
+     * Validates that the given object is a valid structure rule.
      */
-    private static boolean validateProtectedStructure(Object o) {
+    private static boolean validateStructureProtection(Object o) {
         if (!(o instanceof Config cfg)) return false;
 
         Object structures = cfg.get("structures");
         if (!(structures instanceof String s) || !isValidRegex(s)) return false;
 
-        if (!(cfg.get("breachable") instanceof Boolean)) return false;
+        if (cfg.contains("protected") && !(cfg.get("protected") instanceof Boolean)) return false;
+        if (cfg.contains("breachable") && !(cfg.get("breachable") instanceof Boolean)) return false;
 
         if (cfg.contains("canPlaceOn") && !validateAllowList(cfg.get("canPlaceOn"))) return false;
         return !cfg.contains("canBreak") || validateAllowList(cfg.get("canBreak"));
@@ -127,14 +144,19 @@ public class FcapServerConfig extends ServerConfig {
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     @Override
-    public List<StructureRule> getProtectedStructures() {
-        return PROTECTED_STRUCTURE.get().stream()
-                .map(cfg -> new StructureRule(
-                        cfg.get("structures"),
-                        cfg.get("breachable") instanceof Boolean b && b,
-                        parseAllowList(cfg, "canPlaceOn"),
-                        parseAllowList(cfg, "canBreak")
-                ))
+    public List<StructureRule> getStructureRules() {
+        return STRUCTURE_PROTECTION.get().stream()
+                .map(cfg -> {
+                    Object protectedVal = cfg.get("protected");
+                    boolean isProtected = !(protectedVal instanceof Boolean pb) || pb; // absent defaults to protected
+                    boolean breachable = cfg.get("breachable") instanceof Boolean bb && bb;
+                    return new StructureRule(
+                            cfg.get("structures"),
+                            isProtected,
+                            breachable,
+                            parseAllowList(cfg, "canPlaceOn"),
+                            parseAllowList(cfg, "canBreak"));
+                })
                 .toList();
     }
 

@@ -11,7 +11,7 @@ import java.util.List;
  */
 public final class ConfigTestSupport {
 
-    public static final ModConfigSpec.ConfigValue<List<? extends Config>> PROTECTED_STRUCTURE = FcapServerConfig.PROTECTED_STRUCTURE;
+    public static final ModConfigSpec.ConfigValue<List<? extends Config>> STRUCTURE_PROTECTION = FcapServerConfig.STRUCTURE_PROTECTION;
 
     private ConfigTestSupport() {
     }

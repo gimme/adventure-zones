@@ -8,25 +8,32 @@ public abstract class ServerConfig {
     public static ServerConfig INSTANCE;
 
     /**
-     * The protection rules: each applies to a set of structures and carries its own breach mode and place/break
-     * allow-lists.
+     * The structure rules: each applies to a set of structures and carries whether it protects, its breach mode, and
+     * its place/break allow-lists. Includes non-protecting "library" rules, which only contribute allow-lists.
      */
-    public abstract List<StructureRule> getProtectedStructures();
+    public abstract List<StructureRule> getStructureRules();
 
     /**
-     * A protection rule for a set of structures.
+     * A rule for a set of structures.
      *
-     * @param structures a regex matching the structures this rule applies to
-     * @param breachable if {@code false}, the structure's blocks can never be edited; if {@code true}, they can be
-     *                   edited only while the player stands outside all protected pieces (breach from outside, locked
-     *                   inside)
-     * @param canPlaceOn exceptions for this rule: maps an item-name regex to a block-name regex of blocks the item may
-     *                   still be placed on
-     * @param canBreak   exceptions for this rule: maps an item-name regex to a block-name regex of blocks the item may
-     *                   still break
+     * @param structures  a regex matching the structures this rule applies to
+     * @param isProtected if {@code true} (the default), a matching structure is in scope and its blocks are protected.
+     *                    If {@code false}, the rule never puts a structure into scope on its own; it only contributes
+     *                    its allow-lists to structures that some other rule protects. Use {@code false} for a shared
+     *                    "library" rule, e.g. a {@code ".*"} base granting common exceptions to every protected
+     *                    structure without having to repeat them per structure.
+     * @param breachable  if {@code false}, the structure's blocks can never be edited; if {@code true}, they can be
+     *                    edited only while the player stands outside this structure's own pieces (breach from outside,
+     *                    locked inside) — standing inside an unrelated protected structure does not block it. Only
+     *                    meaningful on a protecting rule.
+     * @param canPlaceOn  exceptions for this rule: maps an item-name regex to a block-name regex of blocks the item may
+     *                    still be placed on
+     * @param canBreak    exceptions for this rule: maps an item-name regex to a block-name regex of blocks the item may
+     *                    still break
      */
     public record StructureRule(
             String structures,
+            boolean isProtected,
             boolean breachable,
             Map<String, String> canPlaceOn,
             Map<String, String> canBreak
