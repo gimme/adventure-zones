@@ -1,4 +1,4 @@
-# Adventure Zones
+# Structure Protection
 
 Protect generated structures from being placed in or broken into, for an extra exploration challenge.
 

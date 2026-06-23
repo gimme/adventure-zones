@@ -1,17 +1,17 @@
 {
     "schemaVersion": 1,
-    "id": "adventurezones_gametest",
+    "id": "structureprotection_gametest",
     "version": "1.0.0",
-    "name": "Adventure Zones Game Tests",
-    "description": "Game tests for Adventure Zones. Dev-only; not shipped in the release jar.",
+    "name": "Structure Protection Game Tests",
+    "description": "Game tests for Structure Protection. Dev-only; not shipped in the release jar.",
     "environment": "server",
     "entrypoints": {
         "fabric-gametest": [
-            "dev.gimme.adventurezones.fabric.gametest.FabricGameTests"
+            "dev.gimme.structureprotection.fabric.gametest.FabricGameTests"
         ]
     },
     "depends": {
-        "adventurezones": "*",
+        "structureprotection": "*",
         "fabric-gametest-api-v1": "*"
     }
 }

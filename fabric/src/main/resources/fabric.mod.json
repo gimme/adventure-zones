@@ -8,15 +8,15 @@
         "${mod_author}"
     ],
     "contact": {
-        "homepage": "https://modrinth.com/mod/adventure-zones",
-        "issues": "https://github.com/gimme/adventure-zones/issues",
-        "sources": "https://github.com/gimme/adventure-zones"
+        "homepage": "https://modrinth.com/mod/structure-protection",
+        "issues": "https://github.com/gimme/structure-protection/issues",
+        "sources": "https://github.com/gimme/structure-protection"
     },
     "license": "${license}",
     "environment": "server",
     "entrypoints": {
         "main": [
-            "dev.gimme.adventurezones.fabric.FabricMod"
+            "dev.gimme.structureprotection.fabric.FabricMod"
         ]
     },
     "mixins": [
