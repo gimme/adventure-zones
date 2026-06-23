@@ -13,10 +13,13 @@
         "sources": "https://github.com/gimme/structure-protection"
     },
     "license": "${license}",
-    "environment": "server",
+    "environment": "*",
     "entrypoints": {
         "main": [
             "dev.gimme.structureprotection.fabric.FabricMod"
+        ],
+        "client": [
+            "dev.gimme.structureprotection.fabric.client.FabricClientMod"
         ]
     },
     "mixins": [
