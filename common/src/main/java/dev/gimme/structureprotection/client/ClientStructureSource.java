@@ -1,13 +1,11 @@
 package dev.gimme.structureprotection.client;
 
 import dev.gimme.structureprotection.domain.ProtectedPiece;
-import dev.gimme.structureprotection.domain.StructureRule;
 import dev.gimme.structureprotection.domain.StructureSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,22 +32,7 @@ public final class ClientStructureSource implements StructureSource {
         for (ProtectedPiece piece : pieces) {
             if (piece.contains(pos)) here.add(piece.structure());
         }
-        if (here.isEmpty()) return List.of();
-
-        List<StructureRule> rules = regions.rules();
-        List<Match> matches = new ArrayList<>();
-        for (Identifier structureId : here) {
-            List<StructureRule> matchingRules = new ArrayList<>();
-            for (StructureRule rule : rules) {
-                if (rule.appliesTo(structureId)) {
-                    matchingRules.add(rule);
-                }
-            }
-            if (!matchingRules.isEmpty()) {
-                matches.add(new Match(structureId, matchingRules));
-            }
-        }
-        return matches;
+        return StructureSource.resolveMatches(here, regions.rules());
     }
 
     @Override

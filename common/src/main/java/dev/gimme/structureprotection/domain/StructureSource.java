@@ -4,6 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -33,4 +35,20 @@ public interface StructureSource {
      * inside the very structure a breach targets, rather than inside any protected structure at all.
      */
     boolean isInsidePiece(Level level, BlockPos pos, Identifier structure);
+
+    /**
+     * Pairs each present structure with the rules that apply to it, dropping any structure no rule matches. Shared by the
+     * server and client sources, which differ only in how they discover which structures are present at a position.
+     */
+    static List<Match> resolveMatches(Collection<Identifier> structuresHere, List<StructureRule> rules) {
+        List<Match> matches = new ArrayList<>();
+        for (Identifier structure : structuresHere) {
+            List<StructureRule> applicable = new ArrayList<>();
+            for (StructureRule rule : rules) {
+                if (rule.appliesTo(structure)) applicable.add(rule);
+            }
+            if (!applicable.isEmpty()) matches.add(new Match(structure, applicable));
+        }
+        return matches;
+    }
 }

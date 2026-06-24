@@ -38,7 +38,9 @@ public final class NeoForgeGameTests {
             new Test("protected_structures_configurable", 20, StructureProtectionGameTests::protectedStructuresConfigurable),
             new Test("protect_structural_configurable", 20, StructureProtectionGameTests::protectStructuralConfigurable),
             new Test("rule_policy", 20, StructureProtectionGameTests::rulePolicy),
-            new Test("block_edit_structural", 20, StructureProtectionGameTests::blockEditStructural));
+            new Test("block_edit_structural", 20, StructureProtectionGameTests::blockEditStructural),
+            new Test("block_protection_break", 20, StructureProtectionGameTests::blockProtectionBreak),
+            new Test("block_protection_place", 20, StructureProtectionGameTests::blockProtectionPlace));
 
     private NeoForgeGameTests() {
     }

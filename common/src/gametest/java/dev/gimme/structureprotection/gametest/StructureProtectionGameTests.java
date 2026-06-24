@@ -2,14 +2,28 @@ package dev.gimme.structureprotection.gametest;
 
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.toml.TomlFormat;
+import dev.gimme.structureprotection.application.BlockProtection;
 import dev.gimme.structureprotection.domain.BlockEdit;
 import dev.gimme.structureprotection.domain.IdPattern;
 import dev.gimme.structureprotection.domain.StructureRule;
+import dev.gimme.structureprotection.domain.StructureSource;
+import dev.gimme.structureprotection.domain.StructureSource.Match;
 import dev.gimme.structureprotection.domain.config.ServerConfig;
 import dev.gimme.structureprotection.infrastructure.ConfigTestSupport;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
@@ -179,5 +193,145 @@ public final class StructureProtectionGameTests {
         helper.assertTrue(breakEdit.isBreaking() && !breakEdit.isPlacing(), "a breaking edit should report breaking");
 
         helper.succeed();
+    }
+
+    /**
+     * The break decision in {@link BlockProtection}, driven against a fake {@link StructureSource} so each scenario can
+     * be set up exactly: creative bypass, protection by shape and by name, the {@code canBreak} allow-list, breach
+     * (locked inside / breakable from outside), and the union of rules across a structure.
+     */
+    public static void blockProtectionBreak(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Identifier structure = Identifier.fromNamespaceAndPath("minecraft", "stronghold");
+
+        // A real block to break: stone is structural (its default state blocks motion).
+        BlockPos pos = helper.absolutePos(BlockPos.ZERO).above();
+        level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+
+        Player survival = helper.makeMockPlayer(GameType.SURVIVAL);
+        Player creative = helper.makeMockPlayer(GameType.CREATIVE);
+
+        FakeSource source = new FakeSource();
+        BlockProtection protection = new BlockProtection(source);
+
+        // Outside any structure, nothing is protected.
+        source.set(List.of(), false);
+        helper.assertFalse(protection.preventsBreak(level, pos, survival),
+                "a block outside any structure should be breakable");
+
+        // protectStructural protects stone (structural).
+        source.set(match(structure, structural(false)), false);
+        helper.assertTrue(protection.preventsBreak(level, pos, survival),
+                "a structural block in a protected structure should be unbreakable");
+
+        // Creative bypasses protection.
+        helper.assertFalse(protection.preventsBreak(level, pos, creative),
+                "creative mode should bypass protection");
+
+        // A protect regex that doesn't match stone leaves it editable; one that does protects it.
+        source.set(match(structure, byName("diamond_block")), false);
+        helper.assertFalse(protection.preventsBreak(level, pos, survival),
+                "a protect regex that doesn't match the block should not protect it");
+        source.set(match(structure, byName("stone")), false);
+        helper.assertTrue(protection.preventsBreak(level, pos, survival),
+                "a protect regex matching the block should protect it");
+
+        // canBreak overrides protection.
+        source.set(match(structure, rule(true, false, "", "stone")), false);
+        helper.assertFalse(protection.preventsBreak(level, pos, survival),
+                "a canBreak allow-list should permit breaking the block");
+
+        // Breachable: locked while inside, breakable from outside.
+        source.set(match(structure, structural(true)), true);
+        helper.assertTrue(protection.preventsBreak(level, pos, survival),
+                "a breachable structure should stay locked while inside it");
+        source.set(match(structure, structural(true)), false);
+        helper.assertFalse(protection.preventsBreak(level, pos, survival),
+                "a breachable structure should be breakable from outside");
+
+        // A non-breachable structure stays protected even from outside.
+        source.set(match(structure, structural(false)), false);
+        helper.assertTrue(protection.preventsBreak(level, pos, survival),
+                "a non-breachable structure should stay protected from outside");
+
+        // Union: a protecting rule plus a non-protecting "library" rule whose canBreak allows the block.
+        source.set(match(structure, structural(false), rule(false, false, "", "stone")), false);
+        helper.assertFalse(protection.preventsBreak(level, pos, survival),
+                "a canBreak allow-list on any matching rule should override protection (union)");
+
+        helper.succeed();
+    }
+
+    /**
+     * The place decision in {@link BlockProtection}: breaching only ever permits breaking a way in, never placing, and
+     * the place/break allow-lists are kept separate ({@code canPlace} permits placing; {@code canBreak} does not).
+     */
+    public static void blockProtectionPlace(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Identifier structure = Identifier.fromNamespaceAndPath("minecraft", "stronghold");
+        Player survival = helper.makeMockPlayer(GameType.SURVIVAL);
+
+        // A placement context for a stone block (structural).
+        BlockPos pos = helper.absolutePos(BlockPos.ZERO).above();
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+        // The 4-arg ctor derives the level from the player; the mock player's level is this test level.
+        BlockPlaceContext place = new BlockPlaceContext(
+                survival, InteractionHand.MAIN_HAND, new ItemStack(Blocks.STONE), hit);
+
+        FakeSource source = new FakeSource();
+        BlockProtection protection = new BlockProtection(source);
+
+        // Even outside a breachable structure, placing is blocked — breach only ever lets you break in.
+        source.set(match(structure, structural(true)), false);
+        helper.assertTrue(protection.preventsPlace(level, place),
+                "breach should permit breaking in, never placing");
+
+        // canPlace permits placing; canBreak does not.
+        source.set(match(structure, rule(true, false, "stone", "")), false);
+        helper.assertFalse(protection.preventsPlace(level, place),
+                "a canPlace allow-list should permit placing the block");
+        source.set(match(structure, rule(true, false, "", "stone")), false);
+        helper.assertTrue(protection.preventsPlace(level, place),
+                "a canBreak allow-list should not permit placing");
+
+        helper.succeed();
+    }
+
+    private static List<Match> match(Identifier structure, StructureRule... rules) {
+        return List.of(new Match(structure, List.of(rules)));
+    }
+
+    private static StructureRule structural(boolean breachable) {
+        return rule(true, breachable, "", "");
+    }
+
+    private static StructureRule byName(String protect) {
+        return new StructureRule(IdPattern.of(".*"), IdPattern.of(protect), false, false, IdPattern.NONE, IdPattern.NONE);
+    }
+
+    private static StructureRule rule(boolean protectStructural, boolean breachable, String canPlace, String canBreak) {
+        return new StructureRule(IdPattern.of(".*"), IdPattern.NONE, protectStructural, breachable,
+                IdPattern.of(canPlace), IdPattern.of(canBreak));
+    }
+
+    /** A {@link StructureSource} whose verdicts are set per scenario, independent of any real world structure. */
+    private static final class FakeSource implements StructureSource {
+        private List<Match> matches = List.of();
+        private boolean inside;
+
+        void set(List<Match> matches, boolean inside) {
+            this.matches = matches;
+            this.inside = inside;
+        }
+
+        @Override
+        public List<Match> matchesAt(Level level, BlockPos pos) {
+            return matches;
+        }
+
+        @Override
+        public boolean isInsidePiece(Level level, BlockPos pos, Identifier structure) {
+            return inside;
+        }
     }
 }

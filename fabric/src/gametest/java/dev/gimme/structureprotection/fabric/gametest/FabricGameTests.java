@@ -34,4 +34,14 @@ public final class FabricGameTests {
     public void blockEditStructural(GameTestHelper helper) {
         StructureProtectionGameTests.blockEditStructural(helper);
     }
+
+    @GameTest
+    public void blockProtectionBreak(GameTestHelper helper) {
+        StructureProtectionGameTests.blockProtectionBreak(helper);
+    }
+
+    @GameTest
+    public void blockProtectionPlace(GameTestHelper helper) {
+        StructureProtectionGameTests.blockProtectionPlace(helper);
+    }
 }

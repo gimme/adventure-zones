@@ -32,25 +32,15 @@ public final class ServerStructureSource implements StructureSource {
 
         Registry<Structure> structureRegistry = serverLevel.registryAccess().lookupOrThrow(Registries.STRUCTURE);
 
-        List<Match> matches = new ArrayList<>();
+        List<Identifier> structuresHere = new ArrayList<>();
         for (Structure structure : structureManager.getAllStructuresAt(pos).keySet()) {
             // Confirm the position is actually inside a generated piece of this structure, not just its chunk.
             if (!structureManager.getStructureWithPieceAt(pos, structure).isValid()) continue;
 
             Identifier structureId = structureRegistry.getKey(structure);
-            if (structureId == null) continue;
-
-            List<StructureRule> matchingRules = new ArrayList<>();
-            for (StructureRule rule : rules) {
-                if (rule.appliesTo(structureId)) {
-                    matchingRules.add(rule);
-                }
-            }
-            if (!matchingRules.isEmpty()) {
-                matches.add(new Match(structureId, matchingRules));
-            }
+            if (structureId != null) structuresHere.add(structureId);
         }
-        return matches;
+        return StructureSource.resolveMatches(structuresHere, rules);
     }
 
     @Override
